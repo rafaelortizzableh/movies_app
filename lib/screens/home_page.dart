@@ -11,6 +11,9 @@ class MyHomePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, ScopedReader watch) {
+    final paginationState = watch(moviePaginationController);
+    final paginationController = watch(moviePaginationController.notifier);
+
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
@@ -18,32 +21,60 @@ class MyHomePage extends ConsumerWidget {
         centerTitle: true,
         title: Text('Movie App'),
       ),
-      body: watch(moviesFutureProvider).when(
-        error: (e, s) {
-          if (e is MoviesException) {
-            return _ErrorWidget(message: e.message);
-          }
-          return _ErrorWidget(message: "Oops, something unexpected happened");
-        },
-        loading: () {
+      body: Builder(builder: (context) {
+        if (paginationState.refreshError) {
+          return _ErrorWidget(message: paginationState.errorMessage);
+        } else if (paginationState.movies.isEmpty) {
           return Center(
-            child: CircularProgressIndicator(),
+            child: CircularProgressIndicator.adaptive(),
           );
-        },
-        data: (movies) {
-          return RefreshIndicator(
-            onRefresh: () {
-              return context.refresh(moviesFutureProvider);
-            },
-            child: GridView.extent(
+        }
+        return RefreshIndicator(
+          onRefresh: () {
+            return context.refresh(moviePaginationController).getMovies();
+          },
+          child: GridView.builder(
+            gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
               maxCrossAxisExtent: 200,
               mainAxisSpacing: 0,
               childAspectRatio: 0.7,
-              children: movies.map((movie) => _MovieBox(movie: movie)).toList(),
+              crossAxisSpacing: 0,
             ),
-          );
-        },
-      ),
+            itemCount: paginationState.movies.length,
+            itemBuilder: (context, index) {
+              paginationController.handleScrollWithIndex(index);
+              return _MovieBox(movie: paginationState.movies[index]);
+            },
+          ),
+        );
+      }),
+
+      // watch(moviesFutureProvider).when(
+      //   error: (e, s) {
+      //     if (e is MoviesException) {
+      //       return _ErrorWidget(message: e.message);
+      //     }
+      //     return _ErrorWidget(message: "Oops, something unexpected happened");
+      //   },
+      //   loading: () {
+      //     return Center(
+      //       child: CircularProgressIndicator(),
+      //     );
+      //   },
+      //   data: (movies) {
+      //     return RefreshIndicator(
+      //       onRefresh: () {
+      //         return context.refresh(moviesFutureProvider);
+      //       },
+      //       child: GridView.extent(
+      //         maxCrossAxisExtent: 200,
+      //         mainAxisSpacing: 0,
+      //         childAspectRatio: 0.7,
+      //         children: movies.map((movie) => _MovieBox(movie: movie)).toList(),
+      //       ),
+      //     );
+      //   },
+      // ),
     );
   }
 }
@@ -114,7 +145,7 @@ class _ErrorWidget extends StatelessWidget {
           Text(message),
           ElevatedButton(
             onPressed: () {
-              context.refresh(moviesFutureProvider);
+              context.refresh(moviePaginationController).getMovies();
             },
             child: Text('Try Again'),
           ),

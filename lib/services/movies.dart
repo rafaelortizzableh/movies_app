@@ -4,14 +4,17 @@ import '../models/models.dart';
 import '../env/env.dart';
 
 class MovieService {
-  MovieService(this._environmentConfig, this._dio);
+  MovieService(
+    this._environmentConfig,
+    this._dio,
+  );
   final EnvironmentConfig _environmentConfig;
   final Dio _dio;
 
-  Future<List<Movie>> getMovies() async {
+  Future<List<Movie>> getMovies([int page = 1]) async {
     try {
       final response = await _dio.get(
-          'https://api.themoviedb.org/3/movie/popular?api_key=${_environmentConfig.movieApiKey}&language=en-US&page=1');
+          'https://api.themoviedb.org/3/movie/popular?api_key=${_environmentConfig.movieApiKey}&language=en-US&page=$page');
 
       final result = List<Map<String, dynamic>>.from(response.data['results']);
       List<Movie> movies =
